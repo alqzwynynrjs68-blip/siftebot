@@ -345,8 +345,16 @@ const protectionAdminAdvancedCommands=[
 ];
 const isProtectedAdminAdvancedCommand=text=>{
   if(!text)return false;
-  if(protectionAdminAdvancedCommands.some(x=>text===x||text.startsWith(x+' ')))return true;
-  return /^(قفل|فتح|اقفل|افتح)\s+/.test(text);
+  const t=text.trim();
+  if(protectionAdminAdvancedCommands.some(x=>t===x||t.startsWith(x+' ')))return true;
+  return /^(قفل|فتح|اقفل|افتح|اضف رد|حذف رد|فلترة كلمة|الغاء فلترة كلمة|نص الترحيب|سماح رابط|منع رابط|مكافحة الاغراق|مكافحة الإغراق|عدد الانذارات|عقوبة الانذارات|مدة العقوبة|تنظيف|امسح)\s*/.test(t);
+};
+const isAdminOnlyCommand=text=>{
+  if(!text)return false;
+  const t=text.trim();
+  if(isProtectedAdminAdvancedCommand(t))return true;
+  if(['اعدادات المجموعة','معلومات','تفعيل'].includes(t))return true;
+  return false;
 };
 const randomMemberCommandReplies=[
   'اكعد وسكت ولك😒','شسويي بالاوامر انت هااا ؟؟ 🤨','اسكتت فضحتنا لا يشوفوك 😂','ولك هاي مو شغلتك حبيبي 😭','خلي الاوامر لأهلها ولك 😏',
@@ -437,7 +445,7 @@ if(!gcPre.activated){
 group(c);
 const text=(m.text||'').trim(),s=settings(c.id);
 let adm=await admin(ctx);
-if(!adm&&isProtectedAdminAdvancedCommand(text))return rejectMemberAdminCommand(ctx);
+if(!adm&&isAdminOnlyCommand(text))return rejectMemberAdminCommand(ctx);
 if((text==='فحص الردود'||text==='فحص البوت')&&adm){const me=await ctx.api.getMe();const gc=groupConfig(c.id);return ctx.reply(`🧪 فحص نغنوغ\n\n💬 الردود التلقائية: ${gc.auto_replies?'🟢 مفعّلة':'🔴 متوقفة'}\n📡 استقبال رسائل المجموعات: ${me.can_read_all_group_messages?'🟢 مفعّل':'🟠 مفعّل حسب وضع الخصوصية/صلاحية المشرف'}\n🤖 البوت: @${me.username||'غير معروف'}\n\nجرّب الآن إرسال: هلا`)}
 if(m.new_chat_members||m.left_chat_member){if(!gcPre.service_messages){try{await ctx.deleteMessage()}catch{}}else if(m.new_chat_members&&gcPre.anti_bot){for(const nu of m.new_chat_members){if(nu.is_bot){try{await ctx.api.banChatMember(c.id,nu.id);logAdmin(c.id,u.id,'حظر بوت تلقائياً',nu.id,'مكافحة البوتات')}catch{}}}}return;}
 // الردود الأساسية تعمل افتراضياً في كل مجموعة، مع احترام إيقافها من الإعدادات.
