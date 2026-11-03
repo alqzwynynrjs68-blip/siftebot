@@ -363,8 +363,9 @@ const randomMemberCommandReplies=[
   'خليها للمشرفين عيني ❤️','لا تعب نفسك، الأمر مو إلك 😏','ولك اترك الأوامر وروح 😂','هاي مو صلاحياتك حبيبي 🤭','اسكت بس لا أطيك إنذار 😂'
 ];
 async function rejectMemberAdminCommand(ctx){
-  await ctx.reply('عزيزي الامر غير مخصص الك ❤️');
-  return ctx.reply(random(protectedAdminAdvancedReplies));
+  // لا نربط الرد برسالة العضو: نرسل رسائل عادية مستقلة داخل المجموعة.
+  await ctx.api.sendMessage(ctx.chat.id,'عزيزي الامر غير مخصص الك ❤️');
+  return ctx.api.sendMessage(ctx.chat.id,random(protectedAdminAdvancedReplies));
 }
 const protectedAdminAdvancedReplies=randomMemberCommandReplies;
 
