@@ -44,3 +44,5 @@ export const removeMandatoryChannel=id=>run('DELETE FROM mandatory_channels WHER
 export const markGroupLeft=id=>run('UPDATE groups SET active=0 WHERE id=?',id);
 export const groupMembers=chat=>all('SELECT m.*,u.name,u.username FROM members m LEFT JOIN users u ON u.id=m.user WHERE m.chat=? ORDER BY m.messages DESC LIMIT 30',chat);
 export const resetWarnings=(chat,u)=>run('UPDATE members SET warnings=0 WHERE chat=? AND user=?',chat,u);
+
+export const userGroups=u=>all('SELECT g.id,g.title FROM groups g JOIN members m ON m.chat=g.id WHERE m.user=? AND g.active=1 ORDER BY g.title',u);
