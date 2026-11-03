@@ -1,3 +1,9 @@
+## Naghnoog 1.1.0 — Professional group protection
+
+- Owner-only mandatory subscription and broadcast controls.
+- Group security, moderation, warnings, reports, admin logs, word filtering and auto-replies.
+- Iraqi Arabic user-facing messages.
+
 # نغنوغ 🇮🇶
 بوت حماية مجموعات تيليگرام باللهجة العراقية، مبني بـ Node.js و grammY و SQLite.
 

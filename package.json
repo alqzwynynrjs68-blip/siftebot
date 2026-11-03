@@ -1,1 +1,1 @@
-{"name":"iraqi-group-guardian","version":"1.0.0","type":"module","scripts":{"start":"node src/index.js"},"dependencies":{"dotenv":"^16.4.7","grammy":"^1.35.0","better-sqlite3":"^11.8.1"},"engines":{"node":"22.x"}}
+{"name":"iraqi-group-guardian","version":"1.1.0","type":"module","scripts":{"start":"node src/index.js"},"dependencies":{"dotenv":"^16.4.7","grammy":"^1.35.0","better-sqlite3":"^11.8.1"},"engines":{"node":"22.x"}}
