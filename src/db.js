@@ -6,23 +6,32 @@ export const db=new Database(file); db.pragma('journal_mode = WAL');
 db.exec(`CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY,name TEXT,username TEXT);
 CREATE TABLE IF NOT EXISTS groups(id INTEGER PRIMARY KEY,title TEXT,active INTEGER DEFAULT 1);
 CREATE TABLE IF NOT EXISTS members(chat INTEGER,user INTEGER,messages INTEGER DEFAULT 0,points INTEGER DEFAULT 0,warnings INTEGER DEFAULT 0,PRIMARY KEY(chat,user));
-CREATE TABLE IF NOT EXISTS settings(chat INTEGER PRIMARY KEY,locks TEXT DEFAULT '{}',maxwarn INTEGER DEFAULT 3,punishment TEXT DEFAULT 'mute',duration INTEGER DEFAULT 30,channel TEXT);
-CREATE TABLE IF NOT EXISTS games(chat INTEGER PRIMARY KEY,active INTEGER DEFAULT 0,answer TEXT,emoji TEXT);
+CREATE TABLE IF NOT EXISTS settings(chat INTEGER PRIMARY KEY,locks TEXT DEFAULT '{}',maxwarn INTEGER DEFAULT 5,punishment TEXT DEFAULT 'mute',duration INTEGER DEFAULT 30,channel TEXT);
+CREATE TABLE IF NOT EXISTS games(id INTEGER PRIMARY KEY AUTOINCREMENT,chat INTEGER NOT NULL,active INTEGER DEFAULT 1,answer TEXT,emoji TEXT,game_type TEXT DEFAULT 'mean',prompt TEXT,created_at INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY,chat INTEGER,reporter INTEGER,target INTEGER,message INTEGER,status TEXT DEFAULT 'new');
 CREATE TABLE IF NOT EXISTS autoreplies(id INTEGER PRIMARY KEY,chat INTEGER,trigger TEXT,responses TEXT);
 CREATE TABLE IF NOT EXISTS mandatory_channels(id INTEGER PRIMARY KEY AUTOINCREMENT,chat_id TEXT NOT NULL,invite TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS bot_meta(key TEXT PRIMARY KEY,value TEXT);
-CREATE TABLE IF NOT EXISTS group_config(chat INTEGER PRIMARY KEY,welcome INTEGER DEFAULT 1,welcome_text TEXT DEFAULT '',service_messages INTEGER DEFAULT 1,auto_replies INTEGER DEFAULT 1,anti_flood INTEGER DEFAULT 0,links_allow TEXT DEFAULT '',anti_bot INTEGER DEFAULT 0,word_filter INTEGER DEFAULT 0);
+CREATE TABLE IF NOT EXISTS group_config(chat INTEGER PRIMARY KEY,welcome INTEGER DEFAULT 1,welcome_text TEXT DEFAULT '',service_messages INTEGER DEFAULT 1,auto_replies INTEGER DEFAULT 1,anti_flood INTEGER DEFAULT 0,links_allow TEXT DEFAULT '',anti_bot INTEGER DEFAULT 0,word_filter INTEGER DEFAULT 0,activated INTEGER DEFAULT 0);
 CREATE TABLE IF NOT EXISTS admin_logs(id INTEGER PRIMARY KEY AUTOINCREMENT,chat INTEGER,actor INTEGER,action TEXT,target INTEGER,details TEXT,created_at INTEGER);
 CREATE TABLE IF NOT EXISTS group_bans(chat INTEGER,target INTEGER,reason TEXT,created_at INTEGER,PRIMARY KEY(chat,target));
 CREATE TABLE IF NOT EXISTS blocked_words(id INTEGER PRIMARY KEY AUTOINCREMENT,chat INTEGER,word TEXT NOT NULL,UNIQUE(chat,word));`);
 const cfgCols=db.prepare('PRAGMA table_info(group_config)').all().map(x=>x.name);
-for(const [n,d] of [['anti_bot','INTEGER DEFAULT 0'],['word_filter','INTEGER DEFAULT 0']]) if(!cfgCols.includes(n)) db.exec(`ALTER TABLE group_config ADD COLUMN ${n} ${d}`);
+for(const [n,d] of [['anti_bot','INTEGER DEFAULT 0'],['word_filter','INTEGER DEFAULT 0'],['activated','INTEGER DEFAULT 0']]) if(!cfgCols.includes(n)) db.exec(`ALTER TABLE group_config ADD COLUMN ${n} ${d}`);
 // الردود التلقائية الأساسية مفعلة افتراضياً لكل المجموعات الموجودة.
 try{db.exec("UPDATE group_config SET auto_replies=1 WHERE auto_replies IS NULL")}catch{}
-const gameCols=db.prepare('PRAGMA table_info(games)').all().map(x=>x.name);
+try{db.exec("UPDATE settings SET maxwarn=5 WHERE maxwarn=3")}catch{}
+let gameCols=db.prepare('PRAGMA table_info(games)').all();
+if(gameCols.length && gameCols.some(x=>x.name==='chat' && x.pk===1) && !gameCols.some(x=>x.name==='id' && x.pk===1)){
+  db.exec('ALTER TABLE games RENAME TO games_legacy');
+  db.exec("CREATE TABLE games(id INTEGER PRIMARY KEY AUTOINCREMENT,chat INTEGER NOT NULL,active INTEGER DEFAULT 1,answer TEXT,emoji TEXT,game_type TEXT DEFAULT 'mean',prompt TEXT,created_at INTEGER DEFAULT 0)");
+  try{db.exec("INSERT INTO games(chat,active,answer,emoji,game_type,prompt,created_at) SELECT chat,active,answer,emoji,COALESCE(game_type,'mean'),prompt,strftime('%s','now')*1000 FROM games_legacy WHERE active=1")}catch{}
+  db.exec('DROP TABLE games_legacy');
+}
+gameCols=db.prepare('PRAGMA table_info(games)').all().map(x=>x.name);
 if(!gameCols.includes('game_type')) db.exec("ALTER TABLE games ADD COLUMN game_type TEXT DEFAULT 'mean'");
 if(!gameCols.includes('prompt')) db.exec("ALTER TABLE games ADD COLUMN prompt TEXT");
+if(!gameCols.includes('created_at')) db.exec("ALTER TABLE games ADD COLUMN created_at INTEGER DEFAULT 0");
 const run=(q,...a)=>db.prepare(q).run(...a), get=(q,...a)=>db.prepare(q).get(...a), all=(q,...a)=>db.prepare(q).all(...a);
 export const user=u=>run('INSERT INTO users VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,username=excluded.username',u.id,u.first_name||'',u.username||'');
 export const group=c=>{run('INSERT INTO groups(id,title) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,active=1',c.id,c.title||'');run('INSERT OR IGNORE INTO settings(chat) VALUES(?)',c.id)};
@@ -34,8 +43,14 @@ export const settings=c=>{let x=get('SELECT * FROM settings WHERE chat=?',c)||{}
 export const lock=(c,k,v)=>{let s=settings(c);s.locks[k]=v;run('UPDATE settings SET locks=? WHERE chat=?',JSON.stringify(s.locks),c)};
 export const set=(c,k,v)=>{if(!['maxwarn','punishment','duration','channel'].includes(k))throw Error('bad setting');run(`UPDATE settings SET ${k}=? WHERE chat=?`,v,c)};
 export const warn=(c,u)=>{run('INSERT INTO members(chat,user,warnings) VALUES(?,?,1) ON CONFLICT(chat,user) DO UPDATE SET warnings=warnings+1',c,u);return member(c,u).warnings};
-export const game=(c,active,answer=null,prompt=null,type='mean')=>run('INSERT INTO games(chat,active,answer,emoji,game_type,prompt) VALUES(?,?,?,?,?,?) ON CONFLICT(chat) DO UPDATE SET active=excluded.active,answer=excluded.answer,emoji=excluded.emoji,game_type=excluded.game_type,prompt=excluded.prompt',c,+active,answer,prompt,type);
-export const currentGame=c=>get('SELECT * FROM games WHERE chat=?',c);
+export const game=(c,active,answer=null,prompt=null,type='mean')=>{
+  if(active)return run('INSERT INTO games(chat,active,answer,emoji,game_type,prompt,created_at) VALUES(?,?,?,?,?,?,?)',c,1,answer,prompt,type,Date.now());
+  return run('UPDATE games SET active=0 WHERE chat=? AND active=1',c);
+};
+export const currentGame=c=>get('SELECT * FROM games WHERE chat=? AND active=1 ORDER BY id DESC LIMIT 1',c);
+export const activeGames=c=>all('SELECT * FROM games WHERE chat=? AND active=1 ORDER BY id ASC',c);
+export const gameById=id=>get('SELECT * FROM games WHERE id=?',id);
+export const finishGame=id=>run('UPDATE games SET active=0 WHERE id=?',id);
 export const report=(c,r,t,m)=>run("INSERT INTO reports(chat,reporter,target,message,status) VALUES(?,?,?,?, 'new')",c,r,t,m);
 export const stats=()=>({users:get('SELECT count(*) n FROM users').n,groups:get('SELECT count(*) n FROM groups WHERE active=1').n,reports:get("SELECT count(*) n FROM reports WHERE status='new'").n});
 export const users=()=>all('SELECT * FROM users ORDER BY rowid DESC LIMIT 30');
@@ -58,8 +73,8 @@ export const resetWarnings=(chat,u)=>run('UPDATE members SET warnings=0 WHERE ch
 
 export const userGroups=u=>all('SELECT g.id,g.title FROM groups g JOIN members m ON m.chat=g.id WHERE m.user=? AND g.active=1 ORDER BY g.title',u);
 
-export const groupConfig=c=>{let x=get('SELECT * FROM group_config WHERE chat=?',c);if(!x){run('INSERT OR IGNORE INTO group_config(chat) VALUES(?)',c);x=get('SELECT * FROM group_config WHERE chat=?',c)}return x||{welcome:1,welcome_text:'',service_messages:1,auto_replies:1,anti_flood:0,links_allow:'',anti_bot:0,word_filter:0}};
-export const setGroupConfig=(c,k,v)=>{if(!['welcome','welcome_text','service_messages','auto_replies','anti_flood','links_allow','anti_bot','word_filter'].includes(k))throw Error('bad group config');run('INSERT OR IGNORE INTO group_config(chat) VALUES(?)',c);run(`UPDATE group_config SET ${k}=? WHERE chat=?`,v,c)};
+export const groupConfig=c=>{let x=get('SELECT * FROM group_config WHERE chat=?',c);if(!x){run('INSERT OR IGNORE INTO group_config(chat) VALUES(?)',c);x=get('SELECT * FROM group_config WHERE chat=?',c)}return x||{welcome:1,welcome_text:'',service_messages:1,auto_replies:1,anti_flood:0,links_allow:'',anti_bot:0,word_filter:0,activated:0}};
+export const setGroupConfig=(c,k,v)=>{if(!['welcome','welcome_text','service_messages','auto_replies','anti_flood','links_allow','anti_bot','word_filter','activated'].includes(k))throw Error('bad group config');run('INSERT OR IGNORE INTO group_config(chat) VALUES(?)',c);run(`UPDATE group_config SET ${k}=? WHERE chat=?`,v,c)};
 export const logAdmin=(chat,actor,action,target=null,details='')=>run('INSERT INTO admin_logs(chat,actor,action,target,details,created_at) VALUES(?,?,?,?,?,?)',chat,actor,action,target,details,Date.now());
 export const adminLogs=chat=>all('SELECT * FROM admin_logs WHERE chat=? ORDER BY id DESC LIMIT 50',chat);
 export const groupBan=(chat,target,reason='')=>run('INSERT INTO group_bans(chat,target,reason,created_at) VALUES(?,?,?,?) ON CONFLICT(chat,target) DO UPDATE SET reason=excluded.reason,created_at=excluded.created_at',chat,target,reason,Date.now());
