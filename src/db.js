@@ -12,6 +12,9 @@ CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY,chat INTEGER,reporter 
 CREATE TABLE IF NOT EXISTS autoreplies(id INTEGER PRIMARY KEY,chat INTEGER,trigger TEXT,responses TEXT);
 CREATE TABLE IF NOT EXISTS mandatory_channels(id INTEGER PRIMARY KEY AUTOINCREMENT,chat_id TEXT NOT NULL,invite TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS bot_meta(key TEXT PRIMARY KEY,value TEXT);`);
+const gameCols=db.prepare('PRAGMA table_info(games)').all().map(x=>x.name);
+if(!gameCols.includes('game_type')) db.exec("ALTER TABLE games ADD COLUMN game_type TEXT DEFAULT 'mean'");
+if(!gameCols.includes('prompt')) db.exec("ALTER TABLE games ADD COLUMN prompt TEXT");
 const run=(q,...a)=>db.prepare(q).run(...a), get=(q,...a)=>db.prepare(q).get(...a), all=(q,...a)=>db.prepare(q).all(...a);
 export const user=u=>run('INSERT INTO users VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,username=excluded.username',u.id,u.first_name||'',u.username||'');
 export const group=c=>{run('INSERT INTO groups(id,title) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET title=excluded.title,active=1',c.id,c.title||'');run('INSERT OR IGNORE INTO settings(chat) VALUES(?)',c.id)};
@@ -23,7 +26,7 @@ export const settings=c=>{let x=get('SELECT * FROM settings WHERE chat=?',c)||{}
 export const lock=(c,k,v)=>{let s=settings(c);s.locks[k]=v;run('UPDATE settings SET locks=? WHERE chat=?',JSON.stringify(s.locks),c)};
 export const set=(c,k,v)=>{if(!['maxwarn','punishment','duration','channel'].includes(k))throw Error('bad setting');run(`UPDATE settings SET ${k}=? WHERE chat=?`,v,c)};
 export const warn=(c,u)=>{run('INSERT INTO members(chat,user,warnings) VALUES(?,?,1) ON CONFLICT(chat,user) DO UPDATE SET warnings=warnings+1',c,u);return member(c,u).warnings};
-export const game=(c,active,answer=null,emoji=null)=>run('INSERT INTO games(chat,active,answer,emoji) VALUES(?,?,?,?) ON CONFLICT(chat) DO UPDATE SET active=excluded.active,answer=excluded.answer,emoji=excluded.emoji',c,+active,answer,emoji);
+export const game=(c,active,answer=null,prompt=null,type='mean')=>run('INSERT INTO games(chat,active,answer,emoji,game_type,prompt) VALUES(?,?,?,?,?,?) ON CONFLICT(chat) DO UPDATE SET active=excluded.active,answer=excluded.answer,emoji=excluded.emoji,game_type=excluded.game_type,prompt=excluded.prompt',c,+active,answer,prompt,type);
 export const currentGame=c=>get('SELECT * FROM games WHERE chat=?',c);
 export const report=(c,r,t,m)=>run("INSERT INTO reports(chat,reporter,target,message,status) VALUES(?,?,?,?, 'new')",c,r,t,m);
 export const stats=()=>({users:get('SELECT count(*) n FROM users').n,groups:get('SELECT count(*) n FROM groups WHERE active=1').n,reports:get("SELECT count(*) n FROM reports WHERE status='new'").n});
