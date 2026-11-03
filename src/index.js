@@ -111,7 +111,6 @@ const replies={
 "لعب":["يلا نلعب 😎","هات التحدي","اللعبة أحلى وياكم","منو مستعد يخسر؟ 😂"],
 "نقاط":["اجمع أكثر وخلي التوب يرتجف","النقاط تنتظر الأبطال 🏆","لا تضيعها عيني","شوية لعب وتصير متصدر"],
 "توب":["التوب محجوز للأقوياء 😎","منو يريد ينافس؟","شوف التوب واشتغل","اليوم غير، باچر نبدل المتصدر 😂"],
-"معاني":["جاهزين للتحدي؟ 🧠","هات الكلمة ونشوف الشطار","نغنوغ يحب لعبة المعاني","منو أسرع واحد؟ 😏"],
 "رابط":["دير بالك، الروابط عليها عين نغنوغ 👀","إذا رابط مسموح تمام","لا ترسل شي مشبوه عيني","نغنوغ يراقب الروابط 😎"],
 "ممنوع":["الممنوع ممنوع عيني 😂","القوانين فوق الكل","لا تجرب حظك ويا نغنوغ","خلينا على المسموح ونرتاح"],
 "مشرف":["احترم المشرف عيني","المشرف عنده شغل 😂","تدلل يا مشرف","المشرف إذا حضر، اللمة تهدأ 😎"],
@@ -326,7 +325,7 @@ async function startGame(ctx,type='mean'){
   const created=game(chat,true,answer,shown,type);
   const gameId=created.lastInsertRowid;
   setTimeout(()=>{const now=gameById(gameId);if(now?.active){finishGame(gameId);bot.api.sendMessage(chat,`⏰ انتهت الجولة!\nالإجابة كانت: «${answer}»\n\nتگدر تفتح جولة جديدة بأي وقت.`).catch(()=>{});}},60000);
-  if(type==='mean')return ctx.reply(`🧠 لعبة المعاني\n\nأسرع واحد يعرف معنى: ${shown}\n\n✍️ اكتب المعنى برسالة\n🏆 +2 نقطة | ⏱️ 60 ثانية`,{reply_markup:new InlineKeyboard().text('📖 شلون ألعب؟','game:rules:mean')});
+  if(type==='mean')return ctx.reply(`إسرع واحد يكتب معنى ${shown} يربح 2🏆`);
   if(type==='break')return ctx.reply(`🔤 لعبة التفكيك\n\nأسرع واحد يفكك كلمة: [ ${shown} ]\n\n✍️ اكتبها بحروف متباعدة، مثل:\n[ شجرة ] ← ش ج ر ة\n\n🏆 +2 نقطة | ⏱️ 60 ثانية`,{reply_markup:new InlineKeyboard().text('📖 شلون ألعب؟','game:rules:break')});
   if(type==='math')return ctx.reply(`➗ لعبة رياضيات\n\nأسرع واحد يحل: [ ${shown} ]\n\n✍️ اكتب الناتج برسالة\n🏆 +2 نقطة | ⏱️ 60 ثانية`,{reply_markup:new InlineKeyboard().text('📖 شلون ألعب؟','game:rules:math')});
   const kb=new InlineKeyboard();for(const choice of choices)kb.text(choice,`game:opt:${gameId}:${Buffer.from(choice).toString('base64url')}`).row();kb.text('📖 شلون ألعب؟','game:rules:options');
@@ -459,7 +458,20 @@ if(gcNow.auto_replies===null||gcNow.auto_replies===undefined){setGroupConfig(c.i
 if(!adm&&gcNow.anti_flood){const fk=`${c.id}:${u.id}`,now=Date.now(),arr=(floodState.get(fk)||[]).filter(t=>now-t<8000);arr.push(now);floodState.set(fk,arr);if(arr.length>=6){floodState.set(fk,[]);try{await ctx.deleteMessage()}catch{}return issueWarn(ctx,u,'إرسال رسائل بسرعة عالية (إغراق)');}}
 const cfg=groupConfig(c.id);
 if(!adm&&cfg.word_filter){const hay=[m.text,m.caption].filter(Boolean).join(' ').toLowerCase();const bad=blockedWords(c.id).find(x=>x.word&&hay.includes(x.word.toLowerCase()));if(bad){try{await ctx.deleteMessage()}catch{}return issueWarn(ctx,u,`استخدام كلمة ممنوعة: ${bad.word}`);}}
-if(groupConfig(c.id).auto_replies && text && !text.startsWith('/') && !text.startsWith('قفل ') && !text.startsWith('فتح ')){
+// أوامر الألعاب تُعالج قبل الردود التلقائية حتى لا تلتقطها ردود مثل «معاني».
+const gameCommandHandled = text==='معاني'||text==='تفكيك'||text==='رياضيات'||text==='خيارات'||text==='خيارت'||text==='العاب'||text==='ألعاب'||text==='قواعد الالعاب'||text==='قواعد الألعاب'||text==='طريقة اللعب'||text==='نرى اخرى معاني'||text==='نريد اخرى معاني'||text==='مرة ثانية معاني'||text==='نرى اخرى تفكيك'||text==='نريد اخرى تفكيك'||text==='مرة ثانية تفكيك'||text==='نرى اخرى رياضيات'||text==='نريد اخرى رياضيات'||text==='مرة ثانية رياضيات'||text==='نرى اخرى خيارات'||text==='نريد اخرى خيارات'||text==='مرة ثانية خيارات';
+if(text==='العاب'||text==='ألعاب')return ctx.reply(gameMenuText(),{reply_markup:gameMenuKeyboard()});
+if(text==='قواعد الالعاب'||text==='قواعد الألعاب'||text==='طريقة اللعب')return ctx.reply(gameMenuText(),{reply_markup:gameMenuKeyboard()});
+if(text==='معاني')return startGame(ctx,'mean');
+if(text==='تفكيك')return startGame(ctx,'break');
+if(text==='رياضيات')return startGame(ctx,'math');
+if(text==='خيارات'||text==='خيارت')return startGame(ctx,'options');
+if(text==='نرى اخرى معاني'||text==='نريد اخرى معاني'||text==='مرة ثانية معاني')return startGame(ctx,'mean');
+if(text==='نرى اخرى تفكيك'||text==='نريد اخرى تفكيك'||text==='مرة ثانية تفكيك')return startGame(ctx,'break');
+if(text==='نرى اخرى رياضيات'||text==='نريد اخرى رياضيات'||text==='مرة ثانية رياضيات')return startGame(ctx,'math');
+if(text==='نرى اخرى خيارات'||text==='نريد اخرى خيارات'||text==='مرة ثانية خيارات')return startGame(ctx,'options');
+
+if(groupConfig(c.id).auto_replies && text && !gameCommandHandled && !text.startsWith('/') && !text.startsWith('قفل ') && !text.startsWith('فتح ')){
   const norm=normalizeAnswer(text);
   const custom=listReplies(c.id).find(r=>{
     const tr=normalizeAnswer(r.trigger);
@@ -497,17 +509,7 @@ if(text==='ا')return info(ctx,u);
 if(text==='معلومات'&&m.reply_to_message?.from)return info(ctx,m.reply_to_message.from);
 if(text==='توب'){const a=top(c.id);return ctx.reply(a.length?`🏆 نغنوغ | توب 10 اللمة\n${a.map((x,i)=>`${['🥇','🥈','🥉'][i]||`${i+1}.`} ${x.name||'عضو'} — ${x.points}🏆`).join('\n')}`:'بعد ما عدنا متصدرين، العبوا واجمعوا نقاط 🏆')}
 if(text==='تفعيل'){await ctx.reply('نغنوغ يكول: جاري التفعيل ⏳');return ctx.reply('تم تفعيل نغنوغ ✅');}
-if(text==='العاب'||text==='ألعاب')return ctx.reply(gameMenuText(),{reply_markup:gameMenuKeyboard()});
-if(text==='قواعد الالعاب'||text==='قواعد الألعاب'||text==='طريقة اللعب')return ctx.reply(gameMenuText(),{reply_markup:gameMenuKeyboard()});
-if(text==='معاني')return startGame(ctx,'mean');
-if(text==='تفكيك')return startGame(ctx,'break');
-if(text==='رياضيات')return startGame(ctx,'math');
-if(text==='خيارات'||text==='خيارت')return startGame(ctx,'options');
 if(text==='نقاطي')return ctx.reply(`🏆 نقاطك بهالمجموعة: ${member(c.id,u.id).points||0} نقطة\n\nكل فوز باللعبة = +2 🏆`);
-if(text==='نرى اخرى معاني'||text==='نريد اخرى معاني'||text==='مرة ثانية معاني')return startGame(ctx,'mean',true);
-if(text==='نرى اخرى تفكيك'||text==='نريد اخرى تفكيك'||text==='مرة ثانية تفكيك')return startGame(ctx,'break',true);
-if(text==='نرى اخرى رياضيات'||text==='نريد اخرى رياضيات'||text==='مرة ثانية رياضيات')return startGame(ctx,'math',true);
-if(text==='نرى اخرى خيارات'||text==='نريد اخرى خيارات'||text==='مرة ثانية خيارات')return startGame(ctx,'options',true);
 if(text==='بلاغ'&&m.reply_to_message?.from){report(c.id,u.id,m.reply_to_message.from.id,m.reply_to_message.message_id);return ctx.reply('وصل البلاغ للمشرفين، تسلم عيني ❤️')}
 if(!adm){
   const currentCfg=groupConfig(c.id);
