@@ -298,11 +298,11 @@ function shuffleText(value){
 }
 function gameMenuKeyboard(){
   return new InlineKeyboard()
-    .text('🧠 معاني','game:start:mean').text('🔤 تفكيك','game:start:break').row()
-    .text('➗ رياضيات','game:start:math').text('🎯 خيارات','game:start:options').row()
+    .text('🧠 معاني','game:info:mean').text('🔤 تفكيك','game:info:break').row()
+    .text('➗ رياضيات','game:info:math').text('🎯 خيارات','game:info:options').row()
     .text('📖 طريقة اللعب','game:rules').text('🏆 نقاطي','game:score').row();
 }
-function gameMenuText(){return `🎮 ألعاب نغنوغ\n\n🧠 معاني — اعرف معنى السمايلات.\n🔤 تفكيك — فكك الكلمة بحروف متباعدة.\n➗ رياضيات — حل المعادلة الأسرع.\n🎯 خيارات — اختار الجواب الصحيح من 3 أزرار.\n\n🏆 كل فوز = +2 نقطة`}
+function gameMenuText(){return '🔰 إضغط على اللعبة للمعلومات'}
 function gameRulesText(type=null){
   if(type==='mean')return '🧠 المعاني: نغنوغ يرسل سمايلات من حيوانات وفواكه، وأسرع واحد يكتب معناها يفوز. مثال: 🦉🍓 ← بومة فراولة';
   if(type==='break')return '🔤 التفكيك: نغنوغ يرسل كلمة، وأسرع واحد يفككها بحروف متباعدة يفوز. مثال: شجرة ← ش ج ر ة';
@@ -326,7 +326,7 @@ async function startGame(ctx,type='mean'){
   const gameId=created.lastInsertRowid;
   setTimeout(()=>{const now=gameById(gameId);if(now?.active){finishGame(gameId);bot.api.sendMessage(chat,`⏰ انتهت الجولة!\nالإجابة كانت: «${answer}»\n\nتگدر تفتح جولة جديدة بأي وقت.`).catch(()=>{});}},60000);
   if(type==='mean')return ctx.reply(`إسرع واحد يكتب معنى ${shown} يربح 2🏆`);
-  if(type==='break')return ctx.reply(`🔤 لعبة التفكيك\n\nأسرع واحد يفكك كلمة: [ ${shown} ]\n\n✍️ اكتبها بحروف متباعدة، مثل:\n[ شجرة ] ← ش ج ر ة\n\n🏆 +2 نقطة | ⏱️ 60 ثانية`,{reply_markup:new InlineKeyboard().text('📖 شلون ألعب؟','game:rules:break')});
+  if(type==='break')return ctx.reply(`إسرع واحد يفكك كلمة [${shown}] يربح 2🏆`);
   if(type==='math')return ctx.reply(`➗ لعبة رياضيات\n\nأسرع واحد يحل: [ ${shown} ]\n\n✍️ اكتب الناتج برسالة\n🏆 +2 نقطة | ⏱️ 60 ثانية`,{reply_markup:new InlineKeyboard().text('📖 شلون ألعب؟','game:rules:math')});
   const kb=new InlineKeyboard();for(const choice of choices)kb.text(choice,`game:opt:${gameId}:${Buffer.from(choice).toString('base64url')}`).row();kb.text('📖 شلون ألعب؟','game:rules:options');
   return ctx.reply(`🎯 لعبة خيارات\n\n${shown}\n\n🏆 +2 نقطة | ⏱️ 60 ثانية`,{reply_markup:kb});
@@ -636,6 +636,11 @@ bot.callbackQuery(/^game:/,async ctx=>{
   const bits=ctx.callbackQuery.data.split(':');
   if(bits[1]==='opt'){const gameId=Number(bits[2]);const choice=Buffer.from(bits[3],'base64url').toString();const g=gameById(gameId);if(!g?.active)return ctx.answerCallbackQuery({text:'الجولة خلصت.',show_alert:true});if(normalizeAnswer(choice)!==normalizeAnswer(g.answer))return ctx.answerCallbackQuery({text:'مو هذا الجواب 😅 جرّب غيره.',show_alert:true});finishGame(gameId);points(ctx.chat.id,ctx.from.id,2);await ctx.answerCallbackQuery({text:'صح! ربحت +2 🏆',show_alert:true});return ctx.reply(`عفية ${name(ctx.from)}! 🎉\nجاوبت صح وربحت 2🏆`);}
   const action=bits[1];
+  if(action==='info'){
+    const type=bits[2];
+    const info={mean:'🧠 معاني\nيظهر سمايل واحد لحيوان أو فاكهة، وأسرع واحد يكتب معناه يفوز بـ2🏆.',break:'🔤 تفكيك\nتظهر كلمة، وأسرع واحد يكتب حروفها متباعدة وبالترتيب يفوز بـ2🏆.',math:'➗ رياضيات\nتظهر مسألة حسابية، وأسرع واحد يكتب الناتج الصحيح يفوز بـ2🏆.',options:'🎯 خيارات\nيظهر سؤال مع 3 اختيارات، وأسرع واحد يضغط الجواب الصحيح يفوز بـ2🏆.'};
+    return ctx.answerCallbackQuery({text:info[type]||'اختار لعبة حتى تعرف طريقة لعبها.',show_alert:true});
+  }
   if(action==='rules'){
     const type=bits[2]||null;
     return ctx.answerCallbackQuery({text:gameRulesText(type),show_alert:true});
