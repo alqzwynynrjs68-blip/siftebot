@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS group_bans(chat INTEGER,target INTEGER,reason TEXT,cr
 CREATE TABLE IF NOT EXISTS blocked_words(id INTEGER PRIMARY KEY AUTOINCREMENT,chat INTEGER,word TEXT NOT NULL,UNIQUE(chat,word));`);
 const cfgCols=db.prepare('PRAGMA table_info(group_config)').all().map(x=>x.name);
 for(const [n,d] of [['anti_bot','INTEGER DEFAULT 0'],['word_filter','INTEGER DEFAULT 0']]) if(!cfgCols.includes(n)) db.exec(`ALTER TABLE group_config ADD COLUMN ${n} ${d}`);
+// الردود التلقائية الأساسية مفعلة افتراضياً لكل المجموعات الموجودة.
+try{db.exec("UPDATE group_config SET auto_replies=1 WHERE auto_replies IS NULL")}catch{}
 const gameCols=db.prepare('PRAGMA table_info(games)').all().map(x=>x.name);
 if(!gameCols.includes('game_type')) db.exec("ALTER TABLE games ADD COLUMN game_type TEXT DEFAULT 'mean'");
 if(!gameCols.includes('prompt')) db.exec("ALTER TABLE games ADD COLUMN prompt TEXT");
