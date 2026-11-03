@@ -44,7 +44,7 @@ export const lock=(c,k,v)=>{let s=settings(c);s.locks[k]=v;run('UPDATE settings 
 export const set=(c,k,v)=>{if(!['maxwarn','punishment','duration','channel'].includes(k))throw Error('bad setting');run(`UPDATE settings SET ${k}=? WHERE chat=?`,v,c)};
 export const warn=(c,u)=>{run('INSERT INTO members(chat,user,warnings) VALUES(?,?,1) ON CONFLICT(chat,user) DO UPDATE SET warnings=warnings+1',c,u);return member(c,u).warnings};
 export const game=(c,active,answer=null,prompt=null,type='mean')=>{
-  if(active)return run('INSERT INTO games(chat,active,answer,emoji,game_type,prompt,created_at) VALUES(?,?,?,?,?,?,?)',c,1,answer,prompt,type,Date.now());
+  if(active)return run('INSERT INTO games(chat,active,answer,emoji,game_type,prompt,created_at) VALUES(?,?,?,?,?,?,?)',c,1,answer,null,type,prompt,Date.now());
   return run('UPDATE games SET active=0 WHERE chat=? AND active=1',c);
 };
 export const currentGame=c=>get('SELECT * FROM games WHERE chat=? AND active=1 ORDER BY id DESC LIMIT 1',c);
