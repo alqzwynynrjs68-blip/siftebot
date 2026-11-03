@@ -225,6 +225,43 @@ Object.assign(replies,{
 
 const random=a=>a[Math.floor(Math.random()*a.length)], isGroup=c=>['group','supergroup'].includes(c?.type), name=u=>[u.first_name,u.last_name].filter(Boolean).join(' ')||'حبيبنا';
 async function admin(ctx,id=ctx.from.id){try{const m=await ctx.api.getChatMember(ctx.chat.id,id);return ['creator','administrator'].includes(m.status)||id===OWNER}catch{return id===OWNER}}
+const mediaPermissionKeys=['can_send_audios','can_send_documents','can_send_photos','can_send_videos','can_send_video_notes','can_send_voice_notes','can_send_other_messages'];
+async function deleteRecentMessages(ctx,chatId,lastMessageId,count){
+  const ids=[];
+  for(let id=lastMessageId;id>0 && ids.length<count;id--) ids.push(id);
+  let deleted=0;
+  if(typeof ctx.api.deleteMessages==='function'){
+    for(let i=0;i<ids.length;i+=100){
+      const chunk=ids.slice(i,i+100);
+      try{await ctx.api.deleteMessages(chatId,chunk);deleted+=chunk.length;}
+      catch{
+        for(const id of chunk){try{await ctx.api.deleteMessage(chatId,id);deleted++;}catch{}}
+      }
+    }
+    return deleted;
+  }
+  for(const id of ids){try{await ctx.api.deleteMessage(chatId,id);deleted++;}catch{}}
+  return deleted;
+}
+
+async function applyProtectionPermissions(ctx,chatId,locks,{groupLocked=false}={}){
+  const chat=await ctx.api.getChat(chatId);
+  const base={can_send_messages:true,can_send_audios:true,can_send_documents:true,can_send_photos:true,can_send_videos:true,can_send_video_notes:true,can_send_voice_notes:true,can_send_polls:true,can_send_other_messages:true,can_add_web_page_previews:true};
+  const current=chat.permissions||{};
+  for(const k of Object.keys(base)) if(typeof current[k]==='boolean') base[k]=current[k];
+  if(groupLocked){
+    base.can_send_messages=false;
+  }else{
+    base.can_send_messages=true;
+    if(locks.media){for(const k of mediaPermissionKeys)base[k]=false;}
+    if(locks.audio){base.can_send_audios=false;base.can_send_voice_notes=false;}
+    if(locks.photos){base.can_send_photos=false;}
+    if(locks.videos){base.can_send_videos=false;base.can_send_video_notes=false;}
+    if(locks.stickers){base.can_send_other_messages=false;}
+  }
+  await ctx.api.setChatPermissions(chatId,base,{use_independent_chat_permissions:true});
+}
+
 const personalQuestions=['شنو أكثر شي تحبه بوقت فراغك؟','شنو أكثر أكلة تحبها؟','شنو أكثر مكان تحب تروحله؟','شنو الشي اللي يفرحك بسرعة؟','شنو الشي اللي يعصبك بسرعة؟','شنو أكثر أغنية تحب تسمعها؟','شنو آخر فلم أو مسلسل عجبك؟','شنو أكثر لعبة تحبها؟','منو أقرب شخص إلك؟','شنو أكثر صفة تحبها بالناس؟','شنو أكثر صفة ما تحبها؟','إذا سافرت هسه، وين تروح؟','شنو حلمك اللي تتمنى تحققه؟','شنو أكثر موقف ما تنساه؟','شنو أكثر شي تخاف منه؟','شنو الشي اللي تتمنى تتعلمه؟','شنو أكثر مادة كنت تحبها بالدراسة؟','شنو شغلتك أو دراستك؟','شنو أكثر وقت باليوم تحبه؟','تحب الليل لو النهار؟','تحب الشاي لو القهوة؟','شنو أكثر حيوان تحبه؟','شنو لونك المفضل؟','شنو أكثر تطبيق تستخدمه؟','شنو أكثر شي يضحكك؟','إذا ربحت مبلغ كبير، شنو أول شي تسويه؟','شنو أكثر عادة تتمنى تتركها؟','شنو أكثر عادة تحبها بنفسك؟','منو الشخص اللي تتمنى تشوفه هسه؟','شنو أكثر ذكرى تحبها؟','تحب الهدوء لو اللمة؟','شنو أكثر مدينة تحبها بالعراق؟','شنو أكثر شي تشتاقله؟','شنو الشي اللي مستحيل تسامح عليه؟','شنو أكثر كلمة تحب تسمعها؟','شنو أكثر موقف خلاك تضحك هواي؟','شنو الشي اللي تتمنى يصير هالسنة؟','إذا عندك يوم كامل إجازة، شتسوي؟','شنو أكثر شي يخلّيك ترتاح؟','شنو الشي اللي الناس غالباً يفهموه غلط عنك؟','شنو أكثر قرار فخور بيه؟','شنو أكثر شي ما تگدر تعيش بدونه؟','منو أكثر شخص أثر بحياتك؟','شنو أكثر عادة عندك محد يعرفها؟','إذا تغير شي واحد بحياتك، شنو تغير؟','شنو أكثر مكان ترتاح بيه؟','شنو الشي اللي تتمنى تسمعه من شخص تحبه؟','شنو أكثر شي يخليك تثق بالشخص؟','شنو الشي اللي يخليك تفقد الثقة بسرعة؟','إذا عندك أمنية وحدة هسه، شتتمنى؟'];
 const profileLines=[
   "الحلو مالتنا، نورت اللمة 🌹","شهالجمال يا ناس 😍","هااا منو هذا النجم؟ ⭐","اللمة حلوة بوجودك عيني","نورت المكان يا وردة 🌷",
@@ -498,9 +535,51 @@ if(text==='مكافحة الاغراق تشغيل'||text==='مكافحة الإ�
 if(text==='مكافحة الاغراق ايقاف'||text==='مكافحة الإغراق إيقاف'){setGroupConfig(c.id,'anti_flood',0);return ctx.reply('🛡️ تم إيقاف مكافحة الإغراق.');}
 if(text.startsWith('سماح رابط ')&&adm){const domain=text.slice('سماح رابط '.length).trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];if(!domain)return ctx.reply('اكتب الدومين، مثال: سماح رابط example.com');const list=groupConfig(c.id).links_allow.split(',').filter(Boolean);if(!list.includes(domain))list.push(domain);setGroupConfig(c.id,'links_allow',list.join(','));return ctx.reply(`🔗 تمت إضافة ${domain} لقائمة الروابط المسموحة.`);}
 if(text.startsWith('منع رابط ')&&adm){const domain=text.slice('منع رابط '.length).trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];const list=groupConfig(c.id).links_allow.split(',').filter(x=>x!==domain);setGroupConfig(c.id,'links_allow',list.join(','));return ctx.reply(`🔗 تم حذف ${domain} من قائمة الروابط المسموحة.`);}
+if(text==='امسح الكل'){
+  try{
+    const count=await deleteRecentMessages(ctx,c.id,m.message_id,10000);
+    logAdmin(c.id,u.id,'مسح كل الرسائل',null,String(count));
+    return ctx.reply(`🧹 تم حذف ${count} رسالة متاحة للحذف.`);
+  }catch{
+    return ctx.reply('⚠️ ما كدرت أمسح الرسائل. تأكد أن نغنوغ مشرف وعنده صلاحية حذف الرسائل.');
+  }
+}
+if(/^امسح\s+\d+$/.test(text)){
+  const n=Number(text.slice(5).trim());
+  if(!Number.isInteger(n)||n<1)return ctx.reply('اكتب عدد صحيح، مثال: امسح 10');
+  try{
+    const count=await deleteRecentMessages(ctx,c.id,m.message_id,n);
+    logAdmin(c.id,u.id,'مسح رسائل',null,String(count));
+    return ctx.reply(`🧹 تم حذف ${count} رسالة.`);
+  }catch{
+    return ctx.reply('⚠️ ما كدرت أمسح الرسائل. تأكد أن نغنوغ مشرف وعنده صلاحية حذف الرسائل.');
+  }
+}
 if(text.startsWith('تنظيف ')){const n=Math.min(Math.max(Number(text.split(' ').at(-1))||0,1),100);if(!m.reply_to_message?.message_id)return ctx.reply('عيني رد على آخر رسالة تريد أبدي التنظيف من بعدها.');let id=m.reply_to_message.message_id,count=0;for(let i=0;i<n;i++){try{await ctx.api.deleteMessage(c.id,id-i);count++}catch{}}logAdmin(c.id,u.id,'تنظيف رسائل',null,String(count));return ctx.reply(`🧹 تم تنظيف ${count} رسالة.`);}
-if(text==='قفل المجموعة'||text==='فتح المجموعة'||text==='اقفل المجموعة'||text==='افتح المجموعة'){try{const open=text.startsWith('فتح')||text.startsWith('افتح');await ctx.api.setChatPermissions(c.id,open?{can_send_messages:true,can_send_audios:true,can_send_documents:true,can_send_photos:true,can_send_videos:true,can_send_video_notes:true,can_send_voice_notes:true,can_send_polls:true,can_send_other_messages:true,can_add_web_page_previews:true}:{can_send_messages:false});return ctx.reply(open?'🔓 انفتحت المجموعة، رجع النشاط 😍':'🔒 انقفل الحچي بالمجموعة، هدوء شويّة 😌')}catch{return ctx.reply('ما كدرت أغير صلاحيات المجموعة، تأكد من صلاحياتي.')}}
-for(const [label,key] of Object.entries(lockMap)){if(text===`قفل ${label}`||text===`فتح ${label}`||text===`اقفل ${label}`||text===`افتح ${label}`){lock(c.id,key,text.startsWith('قفل'));return ctx.reply((text.startsWith('قفل')||text.startsWith('اقفل'))?`🔒 تم قفل ${label}، ديروا بالكم.`:`🔓 انفتح ${label}، تدللوا.`)}}
+if(text==='قفل المجموعة'||text==='فتح المجموعة'||text==='اقفل المجموعة'||text==='افتح المجموعة'){
+  try{
+    const open=text.startsWith('فتح')||text.startsWith('افتح');
+    await applyProtectionPermissions(ctx,c.id,s.locks,{groupLocked:!open});
+    return ctx.reply(open?'🔓 انفتحت المجموعة، رجع النشاط 😍':'🔒 انقفل الحچي بالمجموعة، هدوء شويّة 😌');
+  }catch(e){
+    return ctx.reply('⚠️ ما كدرت أغير صلاحيات المجموعة. تأكد أن نغنوغ مشرف وعنده صلاحية تقييد الأعضاء.');
+  }
+}
+for(const [label,key] of Object.entries(lockMap)){
+  if(text===`قفل ${label}`||text===`فتح ${label}`||text===`اقفل ${label}`||text===`افتح ${label}`){
+    const enabled=text.startsWith('قفل')||text.startsWith('اقفل');
+    try{
+      lock(c.id,key,enabled);
+      const next=settings(c.id);
+      await applyProtectionPermissions(ctx,c.id,next.locks);
+      logAdmin(c.id,u.id,enabled?`قفل ${label}`:`فتح ${label}`);
+      return ctx.reply(enabled?`🔒 تم قفل ${label}، هسه ما راح يگدرون يرسلونها.`:`🔓 انفتح ${label}، تدللوا.`);
+    }catch(e){
+      lock(c.id,key,!enabled);
+      return ctx.reply('⚠️ حفظت الأمر لكن ما كدرت أطبق القفل على صلاحيات المجموعة. تأكد أن نغنوغ مشرف وعنده صلاحية تقييد الأعضاء.');
+    }
+  }
+}
 if(text==='تصفير الانذارات'&&m.reply_to_message?.from){resetWarnings(c.id,m.reply_to_message.from.id);logAdmin(c.id,u.id,'تصفير الإنذارات',m.reply_to_message.from.id);return ctx.reply('✅ تصفّرت إنذاراته، نخليها بداية جديدة ❤️')}
 if(text.startsWith('عدد الانذارات ')){const n=+text.split(' ').at(-1);if([5,10,15,20].includes(n)){set(c.id,'maxwarn',n);logAdmin(c.id,u.id,'تغيير عدد الإنذارات',null,String(n));return ctx.reply(`⚙️ تمام، الحد صار ${n} إنذارات.`)}}
 if(text.startsWith('عقوبة الانذارات ')){const k=text.split(' ').at(-1),v={كتم:'mute',طرد:'kick',تحذير:'warn'}[k];if(v){set(c.id,'punishment',v);logAdmin(c.id,u.id,'تغيير عقوبة الإنذارات',null,k);return ctx.reply(`⚙️ تمام، عقوبة الإنذارات صارت: ${k}.`)}}
