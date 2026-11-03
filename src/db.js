@@ -28,7 +28,7 @@ export const message=(c,u)=>run('INSERT INTO members(chat,user,messages) VALUES(
 export const points=(c,u,n=2)=>run('INSERT INTO members(chat,user,points) VALUES(?,?,?) ON CONFLICT(chat,user) DO UPDATE SET points=points+excluded.points',c,u,n);
 export const member=(c,u)=>get('SELECT * FROM members WHERE chat=? AND user=?',c,u)||{messages:0,points:0,warnings:0};
 export const top=c=>all('SELECT m.*,u.name FROM members m LEFT JOIN users u ON u.id=m.user WHERE chat=? ORDER BY points DESC,messages DESC LIMIT 10',c);
-export const settings=c=>{let x=get('SELECT * FROM settings WHERE chat=?',c)||{};let locks={};try{locks=JSON.parse(x.locks||'{}')}catch{}return {...x,locks:locks&&typeof locks==='object'&&!Array.isArray(locks)?locks:{}}};
+export const settings=c=>{let x=get('SELECT * FROM settings WHERE chat=?',c)||{};let locks={};try{locks=JSON.parse(x.locks||'{}')}catch{};locks=locks&&typeof locks==='object'&&!Array.isArray(locks)?locks:{};const defaults={links:false,photos:false,videos:false,media:false,audio:false,stickers:false,forward:false,repeat:false};return {...x,locks:{...defaults,...locks}}};
 export const lock=(c,k,v)=>{let s=settings(c);s.locks[k]=v;run('UPDATE settings SET locks=? WHERE chat=?',JSON.stringify(s.locks),c)};
 export const set=(c,k,v)=>{if(!['maxwarn','punishment','duration','channel'].includes(k))throw Error('bad setting');run(`UPDATE settings SET ${k}=? WHERE chat=?`,v,c)};
 export const warn=(c,u)=>{run('INSERT INTO members(chat,user,warnings) VALUES(?,?,1) ON CONFLICT(chat,user) DO UPDATE SET warnings=warnings+1',c,u);return member(c,u).warnings};
