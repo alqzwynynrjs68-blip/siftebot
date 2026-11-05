@@ -299,25 +299,63 @@ function decorateReply(text){
   for(const [re,emoji] of rules) if(re.test(text)) return `${text} ${emoji}`;
   return `${text} 🙂`;
 }
-function normalizeAnswer(v){return (v||'').toLowerCase().replace(/[\u064B-\u065F\u0670ـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/[،.!؟?\s]/g,'').trim()}
+function normalizeAnswer(v){return (v||'').toLowerCase().replace(/[\u064B-\u065F\u0670ـ]/g,'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[،.!؟?\s]/g,'').trim()}
 function shuffleText(value){
   const chars=Array.from(value);
   for(let i=chars.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[chars[i],chars[j]]=[chars[j],chars[i]];}
   return chars.join(' ');
 }
+const characterGames=[
+  ['طبيب وعالم مسلم، ألّف كتاب القانون في الطب. من أكون؟','ابن سينا'],
+  ['قائد مسلم ارتبط اسمه بتحرير القدس في معركة حطين. من أكون؟','صلاح الدين الأيوبي'],
+  ['عالم اشتهر بقانون الجاذبية والتفاحة. من أكون؟','نيوتن'],
+  ['رسام إيطالي رسم لوحة الموناليزا. من أكون؟','ليوناردو دافنشي'],
+  ['شاعر عربي لُقّب بأمير الشعراء. من أكون؟','أحمد شوقي'],
+  ['رحالة مغربي جاب بلداناً كثيرة ودوّن رحلاته. من أكون؟','ابن بطوطة'],
+  ['عالم مسلم اشتهر بتأسيس علم الجبر. من أكون؟','الخوارزمي'],
+  ['مخترع المصباح الكهربائي العملي. من أكون؟','توماس إديسون']
+];
+const countryGames=[['🇮🇶','العراق'],['🇯🇵','اليابان'],['🇧🇷','البرازيل'],['🇫🇷','فرنسا'],['🇪🇬','مصر'],['🇹🇷','تركيا'],['🇨🇦','كندا'],['🇮🇹','إيطاليا'],['🇸🇦','السعودية'],['🇩🇪','ألمانيا'],['🇦🇺','أستراليا'],['🇰🇷','كوريا الجنوبية'],['🇲🇦','المغرب'],['🇬🇷','اليونان']];
+const movieGames=[['🦁👑','الأسد الملك'],['🧊🚢','تايتانيك'],['🕷️🧑','سبايدرمان'],['🐠🔍','البحث عن نيمو'],['🏠🎈','فوق'],['👸❄️','فروزن'],['🦖🏝️','حديقة الديناصورات'],['🐼🥋','كونغ فو باندا'],['🚗⚡','سيارات'],['👽🚲','إي تي']];
+const trueFalseGames=[['الشمس نجم.','صح'],['الخفاش من الطيور.','خطأ'],['عدد أضلاع المربع أربعة.','صح'],['الحوت من الأسماك.','خطأ'],['الأرض تدور حول الشمس.','صح'],['عاصمة أستراليا سيدني.','خطأ'],['الصفر عدد زوجي.','صح'],['الماء يغلي عند 100 درجة مئوية تقريباً عند الضغط الجوي المعتاد.','صح'],['القمر يضيء من نفسه.','خطأ'],['لدى الأخطبوط ثلاثة قلوب.','صح']];
+const whoAmIGames=[
+  ['أعيش في البحر، أتنفس الهواء، وأشتهر بالذكاء. من أنا؟','دلفين'],
+  ['لي رقبة طويلة وأتناول أوراق الأشجار العالية. من أنا؟','زرافة'],
+  ['أحمل بيتي على ظهري وأتحرك ببطء. من أنا؟','سلحفاة'],
+  ['أملك ثمانية أذرع وأعيش غالباً في البحر. من أنا؟','أخطبوط'],
+  ['أُلقب بسفينة الصحراء وأتحمل العطش. من أنا؟','جمل'],
+  ['أصنع العسل وأعيش ضمن جماعة منظمة. من أنا؟','نحلة'],
+  ['أملك خطوطاً سوداء وبيضاء وأشبه الحصان. من أنا؟','حمار وحشي'],
+  ['أطير ليلاً وأستخدم تحديد الموقع بالصدى. من أنا؟','خفاش']
+];
+const proverbGames=[['الصديق وقت الـ...','الضيق'],['من جدّ وجد ومن زرع ...','حصد'],['العقل السليم في الجسم ...','السليم'],['يد واحدة لا ...','تصفق'],['على قدر أهل العزم تأتي ...','العزائم'],['درهم وقاية خير من قنطار ...','علاج'],['الوقت كالسيف إن لم تقطعه ...','قطعك'],['رب أخ لم تلده ...','أمك']];
 function gameMenuKeyboard(){
   return new InlineKeyboard()
     .text('🧠 معاني','game:info:mean').text('🔤 تفكيك','game:info:break').row()
     .text('➗ رياضيات','game:info:math').text('🎯 خيارات','game:info:options').row()
+    .text('👤 خمن الشخصية','game:info:character').text('🚩 خمن الدولة','game:info:country').row()
+    .text('🎬 خمن الفيلم','game:info:movie').text('🧠 صح أم خطأ','game:info:truefalse').row()
+    .text('🔍 من أنا؟','game:info:whoami').text('🔢 خمن الرقم','game:info:number').row()
+    .text('📝 أكمل المثل','game:info:proverb').row()
     .text('📖 طريقة اللعب','game:rules').text('🏆 نقاطي','game:score').row();
 }
-function gameMenuText(){return '🔰 إضغط على اللعبة للمعلومات'}
+function gameMenuText(){return '🎮 ألعاب نغنوغ\n\nاختار اللعبة من الأزرار، وستظهر طريقة اللعب برسالة منبثقة وتبدأ الجولة مباشرة.\n🏆 كل فوز = نقطتان | ⏱️ مدة الجولة 60 ثانية.'}
 function gameRulesText(type=null){
-  if(type==='mean')return '🧠 المعاني: نغنوغ يرسل سمايلات من حيوانات وفواكه، وأسرع واحد يكتب معناها يفوز. مثال: 🦉🍓 ← بومة فراولة';
-  if(type==='break')return '🔤 التفكيك: نغنوغ يرسل كلمة، وأسرع واحد يفككها بحروف متباعدة يفوز. مثال: شجرة ← ش ج ر ة';
-  if(type==='math')return '➗ رياضيات: نغنوغ يرسل معادلة، وأسرع واحد يرسل الناتج الصحيح يفوز.';
-  if(type==='options')return '🎯 خيارات: نغنوغ يسأل سؤال عام ويعطي 3 أزرار، وأسرع واحد يختار الجواب الصحيح يفوز.';
-  return '🎮 تگدر تفتح أكثر من جولة بنفس الوقت.\n🧠 معاني: اكتب معنى السمايلات.\n🔤 تفكيك: فكك الكلمة بحروف متباعدة.\n➗ رياضيات: اكتب الناتج.\n🎯 خيارات: اختار من 3 أزرار.\n🏆 الفائز +2 نقطة.';
+  const rules={
+    mean:'🧠 معاني: اكتب معنى الإيموجي الظاهر.',
+    break:'🔤 تفكيك: اكتب حروف الكلمة متباعدة وبالترتيب.',
+    math:'➗ رياضيات: اكتب ناتج المسألة.',
+    options:'🎯 خيارات: اضغط زر الإجابة الصحيحة.',
+    character:'👤 خمن الشخصية: اقرأ الوصف واكتب اسم الشخصية.',
+    country:'🚩 خمن الدولة: شاهد العلم واكتب اسم الدولة.',
+    movie:'🎬 خمن الفيلم: فسّر الإيموجيات واكتب اسم الفيلم.',
+    truefalse:'🧠 صح أم خطأ: اقرأ العبارة واكتب صح أو خطأ.',
+    whoami:'🔍 من أنا؟ اقرأ التلميح واكتب اسم الشيء أو الحيوان.',
+    number:'🔢 خمن الرقم: خمن رقماً من 1 إلى 10 واكتبه.',
+    proverb:'📝 أكمل المثل: اكتب الكلمة الناقصة لإكمال المثل.'
+  };
+  if(type)return rules[type]||'اختار لعبة من القائمة.';
+  return '🎮 اختار أي لعبة من القائمة.\nأول إجابة صحيحة تفوز بنقطتين 🏆\n⏱️ كل جولة تستمر 60 ثانية، وبعدها تظهر الإجابة الصحيحة.';
 }
 async function startGame(ctx,type='mean'){
   const chat=ctx.chat.id;
@@ -330,15 +368,36 @@ async function startGame(ctx,type='mean'){
     const q=random(mathGames); answer=q[1]; shown=q[0];
   }else if(type==='options'){
     const q=random(optionGames); answer=q[2]; shown=q[0]; choices=[...q[1]].sort(()=>Math.random()-0.5);
+  }else if(type==='character'){
+    const q=random(characterGames); answer=q[1]; shown=q[0];
+  }else if(type==='country'){
+    const q=random(countryGames); answer=q[1]; shown=q[0];
+  }else if(type==='movie'){
+    const q=random(movieGames); answer=q[1]; shown=q[0];
+  }else if(type==='truefalse'){
+    const q=random(trueFalseGames); answer=q[1]; shown=q[0];
+  }else if(type==='whoami'){
+    const q=random(whoAmIGames); answer=q[1]; shown=q[0];
+  }else if(type==='number'){
+    answer=String(Math.floor(Math.random()*10)+1); shown='🔢 خمن الرقم السري من 1 إلى 10';
+  }else if(type==='proverb'){
+    const q=random(proverbGames); answer=q[1]; shown=q[0];
+  }else{
+    return ctx.reply('ما تعرفت على اللعبة، اختارها من قائمة الألعاب.');
   }
   const created=game(chat,true,answer,shown,type);
   const gameId=created.lastInsertRowid;
-  setTimeout(()=>{const now=gameById(gameId);if(now?.active){finishGame(gameId);bot.api.sendMessage(chat,`⏰ انتهت الجولة!\nالإجابة كانت: «${answer}»\n\nتگدر تفتح جولة جديدة بأي وقت.`).catch(()=>{});}},60000);
-  if(type==='mean')return ctx.reply(`إسرع واحد يكتب معنى ${shown} يربح 2🏆`);
-  if(type==='break')return ctx.reply(`إسرع واحد يفكك كلمة [${shown}] يربح 2🏆`);
-  if(type==='math')return ctx.reply(`➗ لعبة رياضيات\n\nأسرع واحد يحل: [ ${shown} ]\n\n✍️ اكتب الناتج برسالة\n🏆 +2 نقطة | ⏱️ 60 ثانية`,{reply_markup:new InlineKeyboard().text('📖 شلون ألعب؟','game:rules:math')});
-  const kb=new InlineKeyboard();for(const choice of choices)kb.text(choice,`game:opt:${gameId}:${Buffer.from(choice).toString('base64url')}`).row();kb.text('📖 شلون ألعب؟','game:rules:options');
-  return ctx.reply(`🎯 لعبة خيارات\n\n${shown}\n\n🏆 +2 نقطة | ⏱️ 60 ثانية`,{reply_markup:kb});
+  setTimeout(()=>{const now=gameById(gameId);if(now?.active){finishGame(gameId);bot.api.sendMessage(chat,`⏰ انتهت الجولة!\nالإجابة الصحيحة: «${answer}»\n\nاختار لعبة ثانية حتى نكمل التحدي 🎮`).catch(()=>{});}},60000);
+  const footer='\n\n🏆 الفائز +2 نقطة | ⏱️ 60 ثانية';
+  if(type==='mean')return ctx.reply(`🧠 معاني: ما معنى ${shown}؟${footer}`);
+  if(type==='break')return ctx.reply(`🔤 فكّك الكلمة: ${shown}${footer}`);
+  if(type==='math')return ctx.reply(`➗ حل المسألة: ${shown}${footer}`);
+  if(type==='options'){
+    const kb=new InlineKeyboard();for(const choice of choices)kb.text(choice,`game:opt:${gameId}:${Buffer.from(choice).toString('base64url')}`).row();
+    return ctx.reply(`🎯 ${shown}${footer}`,{reply_markup:kb});
+  }
+  const labels={character:'👤 خمن الشخصية',country:'🚩 خمن الدولة',movie:'🎬 خمن الفيلم',truefalse:'🧠 صح أم خطأ',whoami:'🔍 من أنا؟',number:'🔢 خمن الرقم',proverb:'📝 أكمل المثل'};
+  return ctx.reply(`${labels[type]}\n${shown}${footer}`);
 }
 async function startMeanGame(ctx){return startGame(ctx,'mean')}
 const lockMap={'الروابط':'links','الصور':'photos','الفيديو':'videos','الوسائط':'media','الصوتيات':'audio','الملصقات':'stickers','التحويل':'forward','التكرار':'repeat'};
@@ -554,6 +613,7 @@ if(text==='نرى اخرى تفكيك'||text==='نريد اخرى تفكيك'||t
 if(text==='نرى اخرى رياضيات'||text==='نريد اخرى رياضيات'||text==='مرة ثانية رياضيات')return startGame(ctx,'math');
 if(text==='نرى اخرى خيارات'||text==='نريد اخرى خيارات'||text==='مرة ثانية خيارات')return startGame(ctx,'options');
 
+const activeList=activeGames(c.id);if(text&&activeList.length){const hit=activeList.find(g=>g.game_type!=='options'&&normalizeAnswer(text)===normalizeAnswer(g.answer));if(hit){finishGame(hit.id);points(c.id,u.id,2);await grantEligibleAchievements(ctx,c.id,u.id);return ctx.reply(`عفية عليك ${name(u)}! 🎉\nإجابة صحيحة وربحت 2🏆\nنغنوغ يفتخر بيك 😎\n\nتگدر تفتح جولة ثانية مباشرة.`)}}
 if(groupConfig(c.id).auto_replies && text && !gameCommandHandled && !text.startsWith('/') && !text.startsWith('قفل ') && !text.startsWith('فتح ')){
   const norm=normalizeAnswer(text);
   const custom=listReplies(c.id).find(r=>{
@@ -580,7 +640,6 @@ if(groupConfig(c.id).auto_replies && text && !gameCommandHandled && !text.starts
   }
 }
 
-const activeList=activeGames(c.id);if(text&&activeList.length){const hit=activeList.find(g=>g.game_type!=='options'&&normalizeAnswer(text)===normalizeAnswer(g.answer));if(hit){finishGame(hit.id);points(c.id,u.id,2);await grantEligibleAchievements(ctx,c.id,u.id);return ctx.reply(`عفية عليك ${name(u)}! 🎉\nإجابة صحيحة وربحت 2🏆\nنغنوغ يفتخر بيك 😎\n\nتگدر تفتح جولة ثانية مباشرة.`)}}
 if(text==='اعدادات المجموعة'&&adm)return ctx.reply('⚙️ إعدادات نغنوغ\n\nاختار القسم اللي تريد تضبطه:',{reply_markup:new InlineKeyboard().text('🛡️ الحماية',`ucfg:${c.id}:security`).row().text('⚠️ الإنذارات',`ucfg:${c.id}:warnings`).text('👋 الترحيب',`ucfg:${c.id}:welcome`).row().text('💬 الردود التلقائية',`ucfg:${c.id}:replies`).text('👥 الأعضاء',`ucfg:${c.id}:members`).row().text('📋 سجل الإدارة',`ucfg:${c.id}:logs`).text('🎮 الألعاب والنقاط',`ucfg:${c.id}:games`)});
 if(text.startsWith('اضف رد ')&&adm){const parts=text.slice(7).split('|').map(x=>x.trim()).filter(Boolean);if(parts.length<2)return ctx.reply('اكتبها هيچ عيني: اضف رد الكلمة | الرد الأول | الرد الثاني');addReply(c.id,parts[0],parts.slice(1));return ctx.reply('تم، من هسه إذا تنذكر هالكلمة أرد بالردود اللي ضفتها ❤️')}
 if(text.startsWith('حذف رد ')&&adm){const id=Number(text.split(' ').at(-1));if(id>0){removeReply(c.id,id);return ctx.reply('إذا الرد موجود، انحذف عيني.')}}
@@ -736,8 +795,9 @@ bot.callbackQuery(/^game:/,async ctx=>{
   const action=bits[1];
   if(action==='info'){
     const type=bits[2];
-    const info={mean:'🧠 معاني\nيظهر سمايل واحد لحيوان أو فاكهة، وأسرع واحد يكتب معناه يفوز بـ2🏆.',break:'🔤 تفكيك\nتظهر كلمة، وأسرع واحد يكتب حروفها متباعدة وبالترتيب يفوز بـ2🏆.',math:'➗ رياضيات\nتظهر مسألة حسابية، وأسرع واحد يكتب الناتج الصحيح يفوز بـ2🏆.',options:'🎯 خيارات\nيظهر سؤال مع 3 اختيارات، وأسرع واحد يضغط الجواب الصحيح يفوز بـ2🏆.'};
-    return ctx.answerCallbackQuery({text:info[type]||'اختار لعبة حتى تعرف طريقة لعبها.',show_alert:true});
+    if(!isGroup(ctx.chat))return ctx.answerCallbackQuery({text:'ابدأ الألعاب من داخل المجموعة حتى يشارك الجميع.',show_alert:true});
+    await ctx.answerCallbackQuery({text:gameRulesText(type),show_alert:true});
+    return startGame(ctx,type);
   }
   if(action==='rules'){
     const type=bits[2]||null;
