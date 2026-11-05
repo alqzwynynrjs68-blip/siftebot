@@ -601,13 +601,16 @@ if(!adm&&gcNow.anti_flood){const fk=`${c.id}:${u.id}`,now=Date.now(),arr=(floodS
 const cfg=groupConfig(c.id);
 if(!adm&&cfg.word_filter){const hay=[m.text,m.caption].filter(Boolean).join(' ').toLowerCase();const bad=blockedWords(c.id).find(x=>x.word&&hay.includes(x.word.toLowerCase()));if(bad){try{await ctx.deleteMessage()}catch{}return issueWarn(ctx,u,`استخدام كلمة ممنوعة: ${bad.word}`);}}
 // أوامر الألعاب تُعالج قبل الردود التلقائية حتى لا تلتقطها ردود مثل «معاني».
-const gameCommandHandled = text==='معاني'||text==='تفكيك'||text==='رياضيات'||text==='خيارات'||text==='خيارت'||text==='العاب'||text==='ألعاب'||text==='قواعد الالعاب'||text==='قواعد الألعاب'||text==='طريقة اللعب'||text==='نرى اخرى معاني'||text==='نريد اخرى معاني'||text==='مرة ثانية معاني'||text==='نرى اخرى تفكيك'||text==='نريد اخرى تفكيك'||text==='مرة ثانية تفكيك'||text==='نرى اخرى رياضيات'||text==='نريد اخرى رياضيات'||text==='مرة ثانية رياضيات'||text==='نرى اخرى خيارات'||text==='نريد اخرى خيارات'||text==='مرة ثانية خيارات';
+const gameCommandHandled = ['معاني','تفكيك','رياضيات','خيارات','خيارت','العاب','ألعاب','قواعد الالعاب','قواعد الألعاب','طريقة اللعب','خمن الشخصية','خمن الدولة','خمن الفيلم','صح أم خطأ','صح ام خطأ','من أنا','من انا','خمن الرقم','أكمل المثل','اكمل المثل','نرى اخرى معاني','نريد اخرى معاني','مرة ثانية معاني','نرى اخرى تفكيك','نريد اخرى تفكيك','مرة ثانية تفكيك','نرى اخرى رياضيات','نريد اخرى رياضيات','مرة ثانية رياضيات','نرى اخرى خيارات','نريد اخرى خيارات','مرة ثانية خيارات'].includes(text);
 if(text==='العاب'||text==='ألعاب')return ctx.reply(gameMenuText(),{reply_markup:gameMenuKeyboard()});
 if(text==='قواعد الالعاب'||text==='قواعد الألعاب'||text==='طريقة اللعب')return ctx.reply(gameMenuText(),{reply_markup:gameMenuKeyboard()});
 if(text==='معاني')return startGame(ctx,'mean');
 if(text==='تفكيك')return startGame(ctx,'break');
 if(text==='رياضيات')return startGame(ctx,'math');
 if(text==='خيارات'||text==='خيارت')return startGame(ctx,'options');
+// أوامر مباشرة للألعاب السبع الجديدة: كتابة الاسم في المجموعة تبدأ الجولة فوراً.
+const directGameCommands={'خمن الشخصية':'character','خمن الدولة':'country','خمن الفيلم':'movie','صح أم خطأ':'truefalse','صح ام خطأ':'truefalse','من أنا':'whoami','من انا':'whoami','خمن الرقم':'number','أكمل المثل':'proverb','اكمل المثل':'proverb'};
+if(directGameCommands[text])return startGame(ctx,directGameCommands[text]);
 if(text==='نرى اخرى معاني'||text==='نريد اخرى معاني'||text==='مرة ثانية معاني')return startGame(ctx,'mean');
 if(text==='نرى اخرى تفكيك'||text==='نريد اخرى تفكيك'||text==='مرة ثانية تفكيك')return startGame(ctx,'break');
 if(text==='نرى اخرى رياضيات'||text==='نريد اخرى رياضيات'||text==='مرة ثانية رياضيات')return startGame(ctx,'math');
